@@ -1,10 +1,10 @@
+# Importer des modules nécessaires
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pymongo import MongoClient
 from bson import json_util, ObjectId
 import json
 from datetime import datetime
-from bson import ObjectId
 from pymongo import DESCENDING
 from dotenv import load_dotenv
 import os
@@ -12,18 +12,17 @@ import os
 # Charger les variables d'environnement à partir du fichier .env
 load_dotenv()
 
-# Configuration de MongoDB en ligne
-mongodb_url = os.getenv("MONGODB_URL")
+# Configuration de MongoDB en utilisant les variables d'environnement
+mongodb_url = os.getenv("MONGODB_URL")  # URL de la base de données MongoDB
 client = MongoClient(mongodb_url)
-db = client['bigdata']
-gouv_collection = db['gouv_data']
+db = client['bigdata']  # Sélectionner la base de données
+gouv_collection = db['gouv_data']  # Sélectionner la collection
 
-# Indexation par date (à faire une seule fois)
-# gouv_collection.create_index("date")
-
+# Initialiser l'application Flask
 app = Flask(__name__)
 CORS(app)
 
+# Route pour obtenir toutes les données
 @app.route('/gouv_data', methods=['GET'])
 def get_all_data():
     page = int(request.args.get('page', 1))
@@ -41,6 +40,7 @@ def get_all_data():
     gouv_data_list_sanitized = json.loads(json_util.dumps(gouv_data_list))
     return jsonify(gouv_data_list_sanitized), 200
 
+# Route pour créer de nouvelles données
 @app.route('/gouv_data', methods=['POST'])
 def create_data():
     new_data = request.json
@@ -50,8 +50,7 @@ def create_data():
     created_id = str(result.inserted_id)
     return jsonify({"message": "Created successfully", "id": created_id}), 201
 
-
-
+# Route pour mettre à jour des données existantes
 @app.route('/gouv_data/<id>', methods=['PUT'])
 def update_data(id):
     updated_data = request.json
@@ -70,6 +69,8 @@ def update_data(id):
             existing_data["fields"]["1_f_commune_pdl"] = updated_data["fields"]["1_f_commune_pdl"]
         if "date_des_donnees" in updated_data["fields"]:
             existing_data["fields"]["date_des_donnees"] = updated_data["fields"]["date_des_donnees"]
+    
+    # Mettez également à jour les champs "datasetid" et "recordid" si présents dans les données mises à jour
     if "datasetid" in updated_data:
         existing_data["datasetid"] = updated_data["datasetid"]
     if "recordid" in updated_data:
@@ -85,14 +86,12 @@ def update_data(id):
     updated_data['inserted_at'] = existing_data['inserted_at']
     return jsonify({"message": "Updated successfully", "id": updated_id, "data": updated_data}), 200
 
-
-
-
-
+# Route pour supprimer des données
 @app.route('/gouv_data/<id>', methods=['DELETE'])
 def delete_data(id):
     gouv_collection.delete_one({"_id": ObjectId(id)})
     return jsonify({"message": "Deleted successfully"}), 200
 
+# Point d'entrée de l'application Flask
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
