@@ -6,9 +6,14 @@ import json
 from datetime import datetime
 from bson import ObjectId
 from pymongo import DESCENDING
+from dotenv import load_dotenv
+import os
+
+# Charger les variables d'environnement à partir du fichier .env
+load_dotenv()
 
 # Configuration de MongoDB en ligne
-mongodb_url = "mongodb+srv://bogadiser:bogadiser@cluster0.qbjii.mongodb.net/"
+mongodb_url = os.getenv("MONGODB_URL")
 client = MongoClient(mongodb_url)
 db = client['bigdata']
 gouv_collection = db['gouv_data']
@@ -60,10 +65,15 @@ def update_data(id):
         existing_data["fields"] = {}
 
     # Mettez à jour les champs "1_f_commune_pdl" et "date_des_donnees" si présents dans les données mises à jour
-    if "1_f_commune_pdl" in updated_data:
-        existing_data["fields"]["1_f_commune_pdl"] = updated_data["1_f_commune_pdl"]
-    if "date_des_donnees" in updated_data:
-        existing_data["fields"]["date_des_donnees"] = updated_data["date_des_donnees"]
+    if "fields" in updated_data:
+        if "1_f_commune_pdl" in updated_data["fields"]:
+            existing_data["fields"]["1_f_commune_pdl"] = updated_data["fields"]["1_f_commune_pdl"]
+        if "date_des_donnees" in updated_data["fields"]:
+            existing_data["fields"]["date_des_donnees"] = updated_data["fields"]["date_des_donnees"]
+    if "datasetid" in updated_data:
+        existing_data["datasetid"] = updated_data["datasetid"]
+    if "recordid" in updated_data:
+        existing_data["recordid"] = updated_data["recordid"]
 
     result = gouv_collection.update_one({"_id": ObjectId(id)}, {"$set": existing_data})
 
@@ -74,6 +84,8 @@ def update_data(id):
     updated_id = str(existing_data['_id'])
     updated_data['inserted_at'] = existing_data['inserted_at']
     return jsonify({"message": "Updated successfully", "id": updated_id, "data": updated_data}), 200
+
+
 
 
 
